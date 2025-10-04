@@ -1,0 +1,252 @@
+/* Basic responsive layout and FaceTime styling */
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #f6f7fb;
+  color: #111;
+  height: 100%;
+  margin: 0;
+}
+.app-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e8e9ef;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.brand {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.sub {
+  color: #57606a;
+  font-size: 14px;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 12px;
+  padding: 12px;
+  height: calc(100% - 48px);
+  min-height: calc(100vh - 60px);
+}
+@media (max-width: 900px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.call-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0b0d10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.bot-tile {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.bot-video,
+.bot-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bot-fallback {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    1200px 800px at 20% 10%,
+    #243b55 0%,
+    #141e30 40%,
+    #0b0d10 100%
+  );
+}
+.bot-avatar {
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  background: conic-gradient(from 180deg, #b2f, #49f, #2dd, #49f, #b2f);
+  filter: blur(0.3px) saturate(1.1);
+}
+
+.pip-tile {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 260px;
+  aspect-ratio: 16/10;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+@media (max-width: 480px) {
+  .pip-tile {
+    width: 180px;
+  }
+}
+.pip-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #111;
+}
+
+.caption {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 40%;
+  max-width: 80%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 16px;
+  line-height: 1.35;
+  letter-spacing: 0.1px;
+  backdrop-filter: blur(6px);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  z-index: 3;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.caption.user {
+  display: none;
+}
+.caption.bot {
+  bottom: 64px;
+  animation: fadeIn 0.25s ease;
+}
+.caption .cursor {
+  margin-left: 2px;
+  opacity: 0.8;
+}
+.caption .ghost {
+  opacity: 0;
+}
+
+.controls {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 14px;
+  display: flex;
+  gap: 10px;
+  z-index: 4;
+}
+.btn {
+  background: #222832;
+  color: #eaeef4;
+  padding: 10px 14px;
+  border: 1px solid #334;
+  border-radius: 10px;
+}
+.btn.active {
+  background: #345;
+  border-color: #4a5b7a;
+}
+
+.story {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e8e9ef;
+  overflow: hidden;
+}
+.story-header {
+  font-weight: 700;
+  padding: 12px 12px 4px 12px;
+}
+.story-sub {
+  color: #57606a;
+  font-size: 13px;
+  padding: 0 12px 8px 12px;
+  border-bottom: 1px solid #f0f1f5;
+}
+.story-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+}
+.story-card {
+  border: 1px solid #eef0f4;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fafbff;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.story-image {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: #dfe6f7;
+}
+.story-image.placeholder {
+  background: repeating-linear-gradient(
+    135deg,
+    #dde4f5,
+    #dde4f5 8px,
+    #e9efff 8px,
+    #e9efff 16px
+  );
+}
+.story-text {
+  font-size: 14px;
+  color: #20252b;
+}
+.story-empty {
+  color: #7a858f;
+  padding: 16px;
+}
+.error {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
