@@ -77,16 +77,16 @@ function CallCanvas() {
   // Async helper to get bot reply from backend
   async function getBotReply(text) {
     try {
-      const res = await fetch("/api/converse", {
+      const res = await fetch("http://localhost:3001/api/converse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ message: text }),
       });
       const data = await res.json();
       return (data.reply || "").trim();
     } catch (err) {
       console.error("API error:", err);
-      return naiveRephrase(text);
+      return "Sorry, I am having trouble connecting to the server.";
     }
   }
 
