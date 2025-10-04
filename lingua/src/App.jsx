@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./facetime.css";
 
 // --- CONFIG STUBS (wire later to real services) ---
-const USE_TAILWIND = false; // set true if you enabled Tailwind
 const BOT_VIDEO_SRC = ""; // e.g., "/bot.mp4" if you drop a loop into public/
 
 export default function App() {
   return (
-    <div className={USE_TAILWIND ? "tw-app" : "app"}>
+    <div className="app">
       <Header />
       <MainArea />
     </div>
@@ -108,8 +107,16 @@ function CallCanvas() {
       }
     };
 
-    r.onerror = () => setListening(false);
-    r.onend = () => setListening(false);
+    r.onerror = (event) => {
+      console.error("SpeechRecognition error:", event.error);
+      alert("Speech recognition error: " + event.error);
+      setListening(false);
+    };
+
+    r.onend = (event) => {
+      console.warn("SpeechRecognition ended:", event);
+      setListening(false);
+    };
     recognizerRef.current = r;
 
     return () => {
