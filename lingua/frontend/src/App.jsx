@@ -1,3 +1,4 @@
+import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./facetime.css";
 
@@ -73,6 +74,22 @@ function CallCanvas() {
   // Inject hook for StoryPanel to register its adder
   const registerStoryAdder = (fn) => (pushStoryItemRef.current = fn);
 
+  // Async helper to get bot reply from backend
+  async function getBotReply(text) {
+    try {
+      const res = await fetch("/api/converse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      return (data.reply || "").trim();
+    } catch (err) {
+      console.error("API error:", err);
+      return naiveRephrase(text);
+    }
+  }
+
   // --- Speech Recognition (user) with interim results ---
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -96,12 +113,13 @@ function CallCanvas() {
 
       // When a final user utterance arrives, produce a bot reply
       if (final.trim()) {
-        const reply = naiveRephrase(final.trim());
-        streamBotCaption(reply, setBotCaption, setBotSpeaking, () => {
-          // when bot finishes, push a story tile
-          pushStoryItemRef.current?.({
-            prompt: reply,
-            // image: to be filled later when Nano-Banana connected
+        getBotReply(final.trim()).then((reply) => {
+          streamBotCaption(reply, setBotCaption, setBotSpeaking, () => {
+            // when bot finishes, push a story tile
+            pushStoryItemRef.current?.({
+              prompt: reply,
+              // image: to be filled later when Nano-Banana connected
+            });
           });
         });
       }
