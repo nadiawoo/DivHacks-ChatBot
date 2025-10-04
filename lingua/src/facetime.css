@@ -15,6 +15,8 @@ body,
   min-height: 100%;
   background: #f6f7fb;
   color: #111;
+  height: 100%;
+  margin: 0;
 }
 .app-header {
   display: flex;
@@ -23,6 +25,7 @@ body,
   padding: 10px 16px;
   border-bottom: 1px solid #e8e9ef;
   background: #fff;
+  flex-wrap: wrap;
 }
 .brand {
   font-weight: 800;
@@ -39,6 +42,7 @@ body,
   gap: 12px;
   padding: 12px;
   height: calc(100% - 48px);
+  min-height: calc(100vh - 60px);
 }
 @media (max-width: 900px) {
   .main {
@@ -59,6 +63,7 @@ body,
 .bot-tile {
   position: absolute;
   inset: 0;
+  z-index: 1;
 }
 .bot-video,
 .bot-fallback {
@@ -95,6 +100,7 @@ body,
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 2;
 }
 @media (max-width: 480px) {
   .pip-tile {
@@ -124,12 +130,16 @@ body,
   backdrop-filter: blur(6px);
   white-space: pre-wrap;
   word-wrap: break-word;
+  z-index: 3;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 .caption.user {
   bottom: 10px;
+  animation: fadeIn 0.25s ease;
 }
 .caption.bot {
   bottom: 64px;
+  animation: fadeIn 0.25s ease;
 }
 .caption .cursor {
   margin-left: 2px;
@@ -146,7 +156,7 @@ body,
   bottom: 14px;
   display: flex;
   gap: 10px;
-  z-index: 6;
+  z-index: 4;
 }
 .btn {
   background: #222832;
@@ -229,4 +239,15 @@ body,
   padding: 6px 8px;
   border-radius: 6px;
   font-size: 12px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
