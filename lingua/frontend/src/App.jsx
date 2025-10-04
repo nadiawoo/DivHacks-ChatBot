@@ -72,6 +72,7 @@ function CallCanvas() {
   }, []);
 
   // Inject hook for StoryPanel to register its adder
+  const pushStoryItemRefCurrent = pushStoryItemRef.current;
   const registerStoryAdder = (fn) => (pushStoryItemRef.current = fn);
 
   // Async helper to get bot reply from backend
@@ -100,6 +101,24 @@ function CallCanvas() {
     r.interimResults = true;
     r.continuous = true;
 
+    let sentenceBuffer = "";
+    let sendTimeout;
+
+    function sendFullSentence() {
+      if (!sentenceBuffer.trim()) return;
+      const fullSentence = sentenceBuffer.trim();
+      sentenceBuffer = "";
+      console.log("📤 Sending full sentence:", fullSentence);
+
+      getBotReply(fullSentence).then((reply) => {
+        streamBotCaption(reply, setBotCaption, setBotSpeaking, () => {
+          pushStoryItemRef.current?.({
+            prompt: reply,
+          });
+        });
+      });
+    }
+
     r.onresult = (evt) => {
       let interim = "";
       let final = "";
@@ -108,20 +127,21 @@ function CallCanvas() {
         if (res.isFinal) final += t + " ";
         else interim += t + " ";
       }
+
       const text = (final || interim).trim();
       setUserCaption({ text, final: !!final });
 
-      // When a final user utterance arrives, produce a bot reply
       if (final.trim()) {
-        getBotReply(final.trim()).then((reply) => {
-          streamBotCaption(reply, setBotCaption, setBotSpeaking, () => {
-            // when bot finishes, push a story tile
-            pushStoryItemRef.current?.({
-              prompt: reply,
-              // image: to be filled later when Nano-Banana connected
-            });
-          });
-        });
+        sentenceBuffer += " " + final.trim();
+
+        // If user ends with punctuation, send immediately
+        if (/[.?!]$/.test(final.trim())) {
+          sendFullSentence();
+        } else {
+          // Otherwise wait 2s after last final result before sending
+          clearTimeout(sendTimeout);
+          sendTimeout = setTimeout(sendFullSentence, 2000);
+        }
       }
     };
 

@@ -11,6 +11,25 @@ app.use(express.json());
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+async function callGeminiWithRetry(prompt, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
+      return response.text;
+    } catch (err) {
+      if (err.error?.code === 429 && attempt < retries) {
+        console.warn(`⚠️ Rate limit hit. Retrying in ${attempt * 5}s...`);
+        await new Promise((res) => setTimeout(res, attempt * 5000));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 app.get("/", (req, res) => {
   res.send("✅ Gemini API server is running!");
 });
@@ -38,19 +57,9 @@ Child said: "${message}"
 LinguaGrow should reply:
 `;
 
-    // Send the request to Gemini 2.5 Flash
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        thinkingConfig: {
-          thinkingBudget: 0, // disables "thinking" for faster replies
-        },
-      },
-    });
-
-    console.log("Gemini →", response.text);
-    res.json({ reply: response.text });
+    const text = await callGeminiWithRetry(prompt);
+    console.log("Gemini →", text);
+    res.json({ reply: text });
   } catch (err) {
     console.error("❌ Gemini API error:", err);
     res.status(500).json({ error: "Failed to get Gemini reply" });
