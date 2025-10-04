@@ -1,7 +1,0 @@
-{
-  "name": "LinguaGrow",
-  "description": "An AI-powered speech companion for children aged 5-13 that helps them form full sentences, hear encouraging feedback, and visualize what they say through simple AI-generated images.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
-}
