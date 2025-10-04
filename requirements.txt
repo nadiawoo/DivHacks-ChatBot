@@ -1,0 +1,7 @@
+google-generativeai
+google-cloud-speech
+google-cloud-texttospeech
+SpeechRecognition
+gTTS
+PyAudio # For microphone input
+pygame # For playing audio
