@@ -1,4 +1,7 @@
 import React from "react";
+// Dynamically set backend API base URL for deployment flexibility
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./facetime.css";
 import { playVoiceFromText } from "./utils/tts";
@@ -69,8 +72,8 @@ function Header({ onProfileClick, profileOpen }) {
   return (
     <header className="app-header">
       <div className="header-text">
-        <div className="brand">Lingua</div>
-        <div className="sub">Real-time speech companion</div>
+        <div className="brand">Stem.me</div>
+        <div className="sub">AI-powered speech companion</div>
       </div>
       <button
         className="profile-btn"
@@ -125,7 +128,7 @@ function CallCanvas({ onUserSpeech }) {
       const payload = { message: text };
       if (sessionInfo.sessionId) payload.sessionId = sessionInfo.sessionId;
 
-      const res = await fetch("http://localhost:3001/api/converse", {
+      const res = await fetch(`${API_BASE_URL}/api/converse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -579,9 +582,7 @@ function StoryPanel() {
           <li key={it.id} className="story-card">
             <div className="story-image">
               <img
-                src={`http://localhost:5173/gemini-native-image-${
-                  items.length - index - 1
-                }.png`}
+                src={`/gemini-native-image-${items.length - index - 1}.png`}
                 alt="Generated Scene"
                 style={{
                   width: "100%",
