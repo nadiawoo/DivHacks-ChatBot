@@ -1,3 +1,4 @@
 node_modules
 .env
-lingua/frontend/public/gemini-native-image*
+lingua/frontend/public/gemini-native-image**.sqlite3-shm
+*.sqlite3-wal
