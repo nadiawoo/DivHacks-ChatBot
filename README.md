@@ -2,8 +2,6 @@
 
 # 🌱 **Stem.me — AI Speech Companion for Children**
 
-![Banner](https://github.com/<your-username>/<your-repo>/assets/banner.png)
-
 > “Because every child deserves to be heard.”  
 > 🗣️ AI-powered speech companion for children with communication challenges.  
 
