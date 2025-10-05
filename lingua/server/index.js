@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
+import { randomUUID } from "crypto";
+import { GoogleGenAI, Modality } from "@google/genai";
 
 dotenv.config();
 
@@ -10,6 +11,140 @@ app.use(cors());
 app.use(express.json());
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// Keep light-weight session state in memory so illustrations evolve with the story.
+const illustrationSessions = new Map();
+
+const ACTION_UPDATE = "update";
+const ACTION_EXPAND = "expand";
+
+const sanitize = (value) => (typeof value === "string" ? value.trim() : "");
+
+const keywordsFrom = (text) =>
+  sanitize(text)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 3);
+
+const resolveAction = (history, latestPrompt, requestedAction) => {
+  if (requestedAction && requestedAction !== "auto") return requestedAction;
+  if (!history.length) return ACTION_UPDATE;
+
+  const previousTerms = new Set(
+    history.flatMap(({ prompt }) => keywordsFrom(prompt))
+  );
+  const latestTerms = keywordsFrom(latestPrompt);
+  const hasNewTopic = latestTerms.some((term) => !previousTerms.has(term));
+  return hasNewTopic ? ACTION_EXPAND : ACTION_UPDATE;
+};
+
+const ensureSession = (sessionId, { reset } = {}) => {
+  let effectiveId = sanitize(sessionId);
+  if (reset || !effectiveId) effectiveId = randomUUID();
+
+  if (!illustrationSessions.has(effectiveId) || reset) {
+    illustrationSessions.set(effectiveId, {
+      history: [],
+      conversation: [],
+      lastChildUtterance: "",
+      lastAssistantReply: "",
+      lastImage: null,
+      lastUpdated: Date.now(),
+    });
+  }
+
+  return { id: effectiveId, state: illustrationSessions.get(effectiveId) };
+};
+
+const buildIllustrationPrompt = ({
+  history,
+  latestPrompt,
+  action,
+  conversation = [],
+}) => {
+  const lines = [
+    "You are NanoBanana, the Gemini illustration model for live children's storytelling.",
+    "Illustrate in a kawaii, picture-book style with soft rounded characters, large expressive eyes, and pastel colors.",
+    "Keep lines clean, shading simple, and make everything friendly, cozy, and safe for children aged 3-10.",
+    "Ensure characters and props remain consistent between frames unless the story explicitly changes them.",
+  ];
+
+  if (history.length) {
+    const recap = history
+      .map((entry, idx) => ` (${idx + 1}) ${entry.prompt}`)
+      .join(";");
+    lines.push(
+      `So far the story scene includes:${recap}. Respect those established details.`
+    );
+  }
+
+  if (conversation.length) {
+    const recentDialogue = conversation
+      .slice(-3)
+      .map(
+        ({ child, assistant }, idx) =>
+          `Turn ${
+            idx + 1
+          }: child said "${child}" and helper replied "${assistant}".`
+      )
+      .join(" ");
+    lines.push(
+      `Recent dialogue to incorporate: ${recentDialogue}. Use the helper's reply to guide the atmosphere and child's intent.`
+    );
+  }
+
+  if (action === ACTION_EXPAND) {
+    lines.push(
+      "Expand the existing canvas to keep prior elements visible while adding new subjects."
+    );
+  } else {
+    lines.push(
+      "Update existing elements in place, refining colors, props, or expressions if needed."
+    );
+  }
+
+  lines.push(
+    `Focus for this update: ${latestPrompt}. Blend it into the ongoing scene in a playful way.`
+  );
+  lines.push(
+    "Return an updated illustration that reflects the complete scene so far."
+  );
+
+  return lines.join("\n");
+};
+
+const generateImageWithGemini = async (prompt) => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        responseModalities: [Modality.IMAGE],
+      },
+    });
+
+    const candidates = response?.candidates || [];
+    for (const candidate of candidates) {
+      const parts = candidate?.content?.parts || [];
+      for (const part of parts) {
+        const data = part?.inlineData?.data;
+        if (data) {
+          const mime = part.inlineData.mimeType || "image/png";
+          return `data:${mime};base64,${data}`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Gemini image generation error:", err);
+  }
+
+  return null;
+};
 
 async function callGeminiWithRetry(prompt, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -36,7 +171,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/converse", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, sessionId, resetSession = false } = req.body || {};
     if (!message) return res.status(400).json({ error: "Missing message" });
 
     // Define the therapeutic system prompt
@@ -59,10 +194,131 @@ LinguaGrow should reply:
 
     const text = await callGeminiWithRetry(prompt);
     console.log("Gemini →", text);
-    res.json({ reply: text });
+
+    const { id: effectiveId, state } = ensureSession(sessionId, {
+      reset: resetSession,
+    });
+
+    state.lastChildUtterance = sanitize(message);
+    state.lastAssistantReply = sanitize(text);
+    state.conversation.push({
+      child: state.lastChildUtterance,
+      assistant: state.lastAssistantReply,
+      timestamp: Date.now(),
+    });
+    if (state.conversation.length > 12) state.conversation.shift();
+    state.lastUpdated = Date.now();
+
+    res.json({ reply: text, sessionId: effectiveId });
   } catch (err) {
     console.error("❌ Gemini API error:", err);
     res.status(500).json({ error: "Failed to get Gemini reply" });
+  }
+});
+
+app.post("/api/illustrate", async (req, res) => {
+  try {
+    const {
+      prompt,
+      sessionId,
+      action = "auto",
+      reset = false,
+    } = req.body || {};
+
+    const cleanedPrompt = sanitize(prompt);
+    if (!cleanedPrompt)
+      return res.status(400).json({ error: "Missing prompt" });
+
+    const { id: effectiveId, state } = ensureSession(sessionId, { reset });
+    const resolvedAction = resolveAction(state.history, cleanedPrompt, action);
+
+    const composedPrompt = buildIllustrationPrompt({
+      history: state.history,
+      latestPrompt: cleanedPrompt,
+      action: resolvedAction,
+    });
+
+    const nbUrl = process.env.NANOBANANA_URL;
+    const nbKey = process.env.NANOBANANA_API_KEY;
+
+    let serviceImage = null;
+
+    if (nbUrl && nbKey) {
+      try {
+        const fetch = (await import("node-fetch")).default;
+        const payload = { prompt: composedPrompt };
+        if (state.lastImage) payload.expand = state.lastImage;
+
+        const r = await fetch(nbUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${nbKey}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!r.ok) {
+          const text = await r.text();
+          console.error("NanoBanana service error:", r.status, text);
+        } else {
+          const body = await r.json();
+          serviceImage = body.image || body.url || null;
+        }
+      } catch (err) {
+        console.error("Error calling NanoBanana service:", err);
+      }
+    }
+
+    if (!serviceImage) {
+      serviceImage = await generateImageWithGemini(composedPrompt);
+    }
+
+    const historyPreview = [
+      ...state.history.map(({ prompt: p }) => p),
+      cleanedPrompt,
+    ]
+      .map((entry, idx) => `${idx + 1}. ${entry}`)
+      .join(" | ");
+
+    const responseImage =
+      serviceImage ||
+      (() => {
+        const safeText = historyPreview
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+
+        const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'>
+  <rect width='100%' height='100%' fill='#f8f9fa'/>
+  <foreignObject x='5%' y='10%' width='90%' height='80%'>
+    <div xmlns='http://www.w3.org/1999/xhtml' style='font-family: Verdana,Arial; font-size: 16px; color: #333;'>
+      <strong>Storyboard so far:</strong><br/>${safeText}
+    </div>
+  </foreignObject>
+</svg>`;
+
+        return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+      })();
+
+    state.history.push({
+      prompt: cleanedPrompt,
+      action: resolvedAction,
+      timestamp: Date.now(),
+    });
+    state.lastImage = responseImage;
+    state.lastUpdated = Date.now();
+
+    res.json({
+      image: responseImage,
+      sessionId: effectiveId,
+      action: resolvedAction,
+      history: state.history,
+      usedService: Boolean(serviceImage),
+    });
+  } catch (err) {
+    console.error("Illustrate error:", err);
+    res.status(500).json({ error: "Failed to generate illustration" });
   }
 });
 
