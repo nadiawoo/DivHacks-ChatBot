@@ -271,9 +271,11 @@ function StoryPanel() {
         Images and prompts build a visual timeline of the conversation.
       </div>
       <ul className="story-list">
-        {items.map((it) => (
+        {items.map((it, index) => (
           <li key={it.id} className="story-card">
-            <div className="story-image placeholder" />
+            <div className="story-image">
+              <img src={'/gemini-native-image-' + (items.length - index - 1) + '.png'} alt="Google Gemini Image" width="72" height="72"/>
+            </div>
             <div className="story-text">{it.prompt}</div>
           </li>
         ))}
