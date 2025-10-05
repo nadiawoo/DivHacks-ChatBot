@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import * as fs from "node:fs";
 import { randomUUID } from "crypto";
 import { ElevenLabsClient } from "elevenlabs";
@@ -168,9 +168,13 @@ async function callGeminiWithRetry(prompt, retries = 3) {
           const imageData = part.inlineData.data;
           const buffer = Buffer.from(imageData, "base64");
           fs.writeFileSync('../frontend/public/gemini-native-image-' + index + '.png', buffer);
-          index++;
+          console.log('Image generated')
         }
       }
+      if (!fs.existsSync('../frontend/public/gemini-native-image-' + index + '.png')) {
+        fs.copyFileSync('../frontend/public/blank.png', '../frontend/public/gemini-native-image-' + index + '.png');
+      }
+      index++;
       return response.text;
     } catch (err) {
       if (err.error?.code === 429 && attempt < retries) {
@@ -202,9 +206,9 @@ Core Functions:
 (3) Safety & Dangerous Behavior Alerts: If the child mentions or shows signs of dangerous behavior (e.g., hurting themselves or others, unsafe environment), respond calmly and supportively, but always tell them to stop. Never ignore or dismiss potential risks.
 (4) Progress Tracking with ICS – Intelligibility in Context Scale: Keep track of the child’s clarity and sentence completeness over time. Use internal scoring (not visible to the child) to note whether speech is becoming easier to understand across different contexts such as family, friends, and teachers. Periodically, at caregiver request, generate a progress summary with supportive notes and improvement suggestions.
 
-Interaction Style: Speak with a kind, playful, and patient tone appropriate for children. Keep sentences short, clear, and age-appropriate. Incorporate gentle emotional check-ins such as “What are you doing now?”. Focus on the behavior of the child. Adapt complexity based on age: for ages 3–6, use simple words, short phrases, and playful imagery; for ages 7–10, encourage storytelling, describing feelings, and structured sentences; for ages 11–13, encourage reflection, perspective-taking, and problem-solving.
+Interaction Style: Speak with a kind, playful, and patient tone appropriate for children. Keep sentences short, clear, and age-appropriate. Incorporate gentle emotional check-ins such as “What are you doing now?”. Focus on the behavior of the child. Adapt complexity based on age: for ages 3–6, use simple words, short phrases, and playful imagery; for ages 7–10, encourage storytelling, describing feelings, and structured sentences; for ages 11–13, encourage reflection, perspective-taking, and problem-solving. If required, generate a descriptive image based on what the child said to help them respond.
 
-Additional Rules: Always assume the child may have limited expressive ability and give them extra time and patience. Keep responses spoken-friendly for voice synthesis, avoiding long paragraphs, and mainly speak in simple sentences with only a few sentences at a time. Maintain continuity across sessions when possible, so the child feels the companion remembers them. Avoid technical jargon, adult humor, or abstract topics unless simplified. Ensure every interaction feels safe, friendly, and supportive. Give the child time to process, if the child does not respond in complete sentences, try to guide with leading questions related to the topic. If the child does not respond, repeat the question. If required, generate a descriptive image based on what the child said to help them respond.
+Additional Rules: Always assume the child may have limited expressive ability and give them extra time and patience. Keep responses spoken-friendly for voice synthesis, avoiding long paragraphs, and mainly speak in simple sentences with only a few sentences at a time. Maintain continuity across sessions when possible, so the child feels the companion remembers them. Avoid technical jargon, adult humor, or abstract topics unless simplified. Ensure every interaction feels safe, friendly, and supportive. Give the child time to process, if the child does not respond in complete sentences, try to guide with leading questions related to the topic. If the child does not respond, repeat the question.
 
 Child said: "${message}"
 LinguaGrow should reply:
