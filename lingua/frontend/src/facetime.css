@@ -20,12 +20,17 @@ body,
 }
 .app-header {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
   padding: 10px 16px;
   border-bottom: 1px solid #e8e9ef;
   background: #fff;
   flex-wrap: wrap;
+}
+.header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .brand {
   font-weight: 800;
@@ -34,6 +39,27 @@ body,
 .sub {
   color: #57606a;
   font-size: 14px;
+}
+.profile-btn {
+  margin-left: auto;
+  background: linear-gradient(135deg, #5a7aea, #8a8df5);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(118, 133, 255, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.profile-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(118, 133, 255, 0.4);
+}
+.profile-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 10px rgba(118, 133, 255, 0.32);
 }
 
 .main {
@@ -165,6 +191,145 @@ body,
 .btn.active {
   background: #345;
   border-color: #4a5b7a;
+}
+
+.profile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 22, 43, 0.7);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 24px;
+}
+.profile-panel {
+  position: relative;
+  width: min(480px, 95vw);
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 20px 45px rgba(20, 28, 60, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.profile-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(240, 244, 255, 0.9);
+  color: #223;
+  font-size: 20px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.profile-close:hover {
+  background: rgba(224, 232, 255, 1);
+}
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+}
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.profile-name-input {
+  font-size: 22px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid rgba(88, 104, 168, 0.2);
+  padding: 4px 0;
+  max-width: 220px;
+}
+.profile-name-input:focus {
+  outline: none;
+  border-bottom-color: #6f80e8;
+}
+.profile-subtitle {
+  color: #6b7484;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.profile-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.plant-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.plant-graphic {
+  width: 100%;
+  max-width: 260px;
+}
+.plant-stage {
+  font-weight: 600;
+  color: #365a3e;
+}
+.plant-progress-bar {
+  width: 80%;
+  max-width: 280px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e3f2ea;
+  overflow: hidden;
+}
+.plant-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #66bb6a, #43a047);
+}
+.progress-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+.progress-primary {
+  font-weight: 600;
+  font-size: 18px;
+  color: #223228;
+}
+.progress-secondary {
+  color: #61706a;
+  font-size: 14px;
+}
+
+@media (max-width: 520px) {
+  .profile-panel {
+    padding: 22px;
+  }
+  .profile-identity {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .profile-name-input {
+    max-width: 100%;
+    text-align: center;
+  }
+  .profile-btn {
+    margin-top: 8px;
+  }
 }
 
 .story {

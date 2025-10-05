@@ -6,7 +6,7 @@ import pygame # To play audio
 
 # --- Configuration (replace with your actual keys/settings) ---
 # For Gemini
-genai.configure(api_key="GEMINI_API_KEY")
+genai.configure(api_key="AIzaSyDBtt_I0WHTn0fzHlTyiJ9SHxYjbS_4CGk")
 model = genai.GenerativeModel('gemini-2.5-flash-lite')
 chat = model.start_chat(history=[]) # Start a chat session
 

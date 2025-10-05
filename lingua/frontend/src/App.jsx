@@ -6,35 +6,97 @@ import { playVoiceFromText } from "./utils/tts";
 // --- CONFIG STUBS (wire later to real services) ---
 const BOT_VIDEO_SRC = ""; // e.g., "/bot.mp4" if you drop a loop into public/
 
+const PROGRESS_STORAGE_KEY = "lingua-progress-words";
+const NAME_STORAGE_KEY = "lingua-profile-name";
+const GROWTH_GOAL = 400; // words spoken to reach full tree
+
+const PLANT_LEVELS = [
+  { min: 0, label: "Sprout", stem: 38, canopy: 16, leaves: 1 },
+  { min: 80, label: "Sapling", stem: 60, canopy: 24, leaves: 2 },
+  { min: 160, label: "Young Tree", stem: 90, canopy: 30, leaves: 3 },
+  { min: 260, label: "Blooming Tree", stem: 120, canopy: 38, leaves: 4 },
+  { min: 360, label: "Towering Tree", stem: 150, canopy: 48, leaves: 5 },
+];
+
 export default function App() {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [totalWords, setTotalWords] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const stored = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+    return stored ? Number(stored) || 0 : 0;
+  });
+  const [profileName, setProfileName] = useState(() => {
+    if (typeof window === "undefined") return "Your Name";
+    return (
+      window.localStorage.getItem(NAME_STORAGE_KEY)?.trim() || "Your Name"
+    );
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(PROGRESS_STORAGE_KEY, String(totalWords));
+  }, [totalWords]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(NAME_STORAGE_KEY, profileName);
+  }, [profileName]);
+
+  const handleUserSpeech = (transcript) => {
+    const count = countWords(transcript);
+    if (!count) return;
+    setTotalWords((prev) => prev + count);
+  };
+
   return (
     <div className="app">
-      <Header />
-      <MainArea />
+      <Header
+        onProfileClick={() => setProfileOpen(true)}
+        profileOpen={profileOpen}
+      />
+      <MainArea onUserSpeech={handleUserSpeech} />
+      {profileOpen && (
+        <ProfileModal
+          name={profileName}
+          onNameChange={setProfileName}
+          onClose={() => setProfileOpen(false)}
+          totalWords={totalWords}
+        />
+      )}
     </div>
   );
 }
 
-function Header() {
+function Header({ onProfileClick, profileOpen }) {
   return (
     <header className="app-header">
-      <div className="brand">Lingua</div>
-      <div className="sub">Real-time speech companion</div>
+      <div className="header-text">
+        <div className="brand">Lingua</div>
+        <div className="sub">Real-time speech companion</div>
+      </div>
+      <button
+        className="profile-btn"
+        onClick={onProfileClick}
+        aria-haspopup="dialog"
+        aria-expanded={profileOpen}
+      >
+        Profile
+      </button>
     </header>
   );
 }
 
-function MainArea() {
+function MainArea({ onUserSpeech }) {
   return (
     <div className="main">
-      <CallCanvas />
+      <CallCanvas onUserSpeech={onUserSpeech} />
       <StoryPanel />
     </div>
   );
 }
 
 /** CallCanvas holds the FaceTime-style layout */
-function CallCanvas() {
+function CallCanvas({ onUserSpeech }) {
   const userVideoRef = useRef(null);
   const [userStreamError, setUserStreamError] = useState("");
 
@@ -45,6 +107,7 @@ function CallCanvas() {
   // Speech recognition state
   const [listening, setListening] = useState(false);
   const recognizerRef = useRef(null);
+  const lastFinalRef = useRef("");
 
   // Bot speaking state (browser TTS for now)
   const [botSpeaking, setBotSpeaking] = useState(false);
@@ -76,7 +139,6 @@ function CallCanvas() {
   }, []);
 
   // Inject hook for StoryPanel to register its adder
-  const pushStoryItemRefCurrent = pushStoryItemRef.current;
   const registerStoryAdder = (fn) => (pushStoryItemRef.current = fn);
 
   // Async helper to get bot reply from backend
@@ -125,6 +187,7 @@ function CallCanvas() {
       if (!sentenceBuffer.trim()) return;
       const fullSentence = sentenceBuffer.trim();
       sentenceBuffer = "";
+      lastFinalRef.current = "";
       console.log("📤 Sending full sentence:", fullSentence);
 
       getBotReply(fullSentence).then((reply) => {
@@ -145,14 +208,26 @@ function CallCanvas() {
         else interim += t + " ";
       }
 
-      const text = (final || interim).trim();
-      setUserCaption({ text, final: !!final });
+      const combinedFinal = final.trim();
+      const text = (combinedFinal || interim).trim();
+      setUserCaption({ text, final: !!combinedFinal });
 
-      if (final.trim()) {
-        sentenceBuffer += " " + final.trim();
+      if (combinedFinal) {
+        const previous = lastFinalRef.current;
+        let incremental = combinedFinal;
+        if (previous && combinedFinal.startsWith(previous)) {
+          incremental = combinedFinal.slice(previous.length).trim();
+        }
+
+        if (incremental) {
+          sentenceBuffer += " " + incremental;
+          onUserSpeech?.(incremental);
+        }
+
+        lastFinalRef.current = combinedFinal;
 
         // If user ends with punctuation, send immediately
-        if (/[.?!]$/.test(final.trim())) {
+        if (/[.?!]$/.test(combinedFinal)) {
           sendFullSentence();
         } else {
           // Otherwise wait 2s after last final result before sending
@@ -166,11 +241,15 @@ function CallCanvas() {
       console.error("SpeechRecognition error:", event.error);
       alert("Speech recognition error: " + event.error);
       setListening(false);
+      sentenceBuffer = "";
+      lastFinalRef.current = "";
     };
 
     r.onend = (event) => {
       console.warn("SpeechRecognition ended:", event);
       setListening(false);
+      sentenceBuffer = "";
+      lastFinalRef.current = "";
     };
     recognizerRef.current = r;
 
@@ -194,6 +273,7 @@ function CallCanvas() {
       setListening(false);
     } else {
       setUserCaption({ text: "", final: false });
+      lastFinalRef.current = "";
       r.start();
       setListening(true);
     }
@@ -262,6 +342,217 @@ function Controls({ listening, onMicToggle }) {
       >
         {listening ? "Stop Mic" : "Start Mic"}
       </button>
+    </div>
+  );
+}
+
+function ProfileModal({ onClose, totalWords, name, onNameChange }) {
+  const [draftName, setDraftName] = useState(name);
+
+  useEffect(() => {
+    setDraftName(name);
+  }, [name]);
+
+  const stageIndex = useMemo(() => {
+    let idx = 0;
+    for (let i = 0; i < PLANT_LEVELS.length; i++) {
+      if (totalWords >= PLANT_LEVELS[i].min) idx = i;
+    }
+    return idx;
+  }, [totalWords]);
+
+  const stage = PLANT_LEVELS[stageIndex];
+  const progressPercent = Math.min((totalWords / GROWTH_GOAL) * 100, 100);
+  const wordsRemaining = Math.max(GROWTH_GOAL - totalWords, 0);
+
+  const handleNameCommit = () => {
+    const trimmed = draftName.trim();
+    onNameChange(trimmed || "Your Name");
+  };
+
+  const handleClose = () => {
+    handleNameCommit();
+    onClose();
+  };
+
+  return (
+    <div className="profile-overlay" role="dialog" aria-modal="true" aria-label="Profile">
+      <div className="profile-panel">
+        <button
+          className="profile-close"
+          onClick={handleClose}
+          aria-label="Close profile"
+        >
+          X
+        </button>
+        <div className="profile-identity">
+          <CartoonAnimal />
+          <div className="profile-meta">
+            <input
+              className="profile-name-input"
+              value={draftName}
+              onChange={(evt) => setDraftName(evt.target.value)}
+              onBlur={handleNameCommit}
+              onKeyDown={(evt) => {
+                if (evt.key === "Enter") {
+                  evt.preventDefault();
+                  handleNameCommit();
+                }
+              }}
+              aria-label="Profile name"
+            />
+            <div className="profile-subtitle">{stage.label}</div>
+          </div>
+        </div>
+        <div className="profile-progress">
+          <PlantGrowth stageIndex={stageIndex} percent={progressPercent} />
+          <div className="progress-stats">
+            <div className="progress-primary">{totalWords} words spoken</div>
+            <div className="progress-secondary">
+              {wordsRemaining > 0
+                ? `${wordsRemaining} words until your ${
+                    PLANT_LEVELS[PLANT_LEVELS.length - 1].label
+                  }.`
+                : "Your tree is fully grown! Keep chatting to keep it thriving."}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CartoonAnimal() {
+  return (
+    <svg
+      className="profile-avatar"
+      viewBox="0 0 120 120"
+      role="img"
+      aria-label="Cartoon fox avatar"
+    >
+      <defs>
+        <linearGradient id="foxFur" x1="0%" x2="100%" y1="0%" y2="100%">
+          <stop offset="0%" stopColor="#f7b267" />
+          <stop offset="50%" stopColor="#f79d65" />
+          <stop offset="100%" stopColor="#f4845f" />
+        </linearGradient>
+      </defs>
+      <circle cx="60" cy="60" r="54" fill="url(#foxFur)" stroke="#e26b4c" strokeWidth="4" />
+      <path
+        d="M22 42 L40 18 L52 40"
+        fill="#fcd9ad"
+        stroke="#e26b4c"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M98 42 L80 18 L68 40"
+        fill="#fcd9ad"
+        stroke="#e26b4c"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="45" cy="60" r="7" fill="#1f2d3d" />
+      <circle cx="75" cy="60" r="7" fill="#1f2d3d" />
+      <path
+        d="M60 70 Q63 78 70 80"
+        stroke="#1f2d3d"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M55 90 Q60 96 65 90"
+        stroke="#1f2d3d"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <circle cx="60" cy="72" r="5" fill="#fcd9ad" stroke="#e26b4c" strokeWidth="2" />
+      <path
+        d="M40 86 L30 90"
+        stroke="#1f2d3d"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M80 86 L90 90"
+        stroke="#1f2d3d"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PlantGrowth({ stageIndex, percent }) {
+  const stage = PLANT_LEVELS[stageIndex];
+  const baseY = 168;
+  const stemTop = baseY - stage.stem;
+  const leafSlots = Array.from({ length: stage.leaves });
+
+  return (
+    <div className="plant-wrapper">
+      <svg
+        className="plant-graphic"
+        viewBox="0 0 160 200"
+        role="img"
+        aria-label={`Plant growth stage: ${stage.label}`}
+      >
+        <defs>
+          <linearGradient id="leafGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+            <stop offset="0%" stopColor="#8cd790" />
+            <stop offset="100%" stopColor="#4f9d69" />
+          </linearGradient>
+          <linearGradient id="potGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+            <stop offset="0%" stopColor="#a9745b" />
+            <stop offset="100%" stopColor="#8b5a44" />
+          </linearGradient>
+        </defs>
+        <rect x="54" y="168" width="52" height="22" fill="url(#potGradient)" rx="8" />
+        <rect x="48" y="160" width="64" height="12" fill="#b8836d" rx="6" />
+        <path
+          d={`M80 ${baseY} Q78 ${stemTop + 10} 80 ${stemTop}`}
+          stroke="#3b6c44"
+          strokeWidth="8"
+          strokeLinecap="round"
+          fill="none"
+        />
+        {leafSlots.map((_, index) => {
+          const offset = index + 1;
+          const y = baseY - offset * (stage.stem / (stage.leaves + 1));
+          const direction = index % 2 === 0 ? -1 : 1;
+          const leafWidth = 28 - index * 3;
+          const cx = 80 + direction * (18 + index * 4);
+          const rotation = direction * (18 - index * 2);
+          return (
+            <ellipse
+              key={index}
+              cx={cx}
+              cy={y}
+              rx={leafWidth / 2}
+              ry={12}
+              fill="url(#leafGradient)"
+              transform={`rotate(${rotation} ${cx} ${y})`}
+              opacity={0.9 - index * 0.08}
+            />
+          );
+        })}
+        <circle
+          cx="80"
+          cy={stemTop - stage.canopy * 0.2}
+          r={stage.canopy}
+          fill="url(#leafGradient)"
+          stroke="#3b6c44"
+          strokeWidth="4"
+        />
+      </svg>
+      <div className="plant-stage">{stage.label}</div>
+      <div className="plant-progress-bar" aria-hidden="true">
+        <div className="plant-progress-fill" style={{ width: `${percent}%` }} />
+      </div>
     </div>
   );
 }
@@ -340,4 +631,12 @@ function streamBotCaption(text, setBotCaption, setBotSpeaking, onDone) {
       onDone?.();
     }
   }, 80); // token streaming speed
+}
+
+function countWords(text) {
+  return text
+    .replace(/[^\p{L}\p{N}\s']/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
 }
