@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import * as fs from "node:fs";
 import { randomUUID } from "crypto";
-import { GoogleGenAI, Modality } from "@google/genai";
 import { ElevenLabsClient } from "elevenlabs";
 
 
