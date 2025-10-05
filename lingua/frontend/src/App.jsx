@@ -27,9 +27,7 @@ export default function App() {
   });
   const [profileName, setProfileName] = useState(() => {
     if (typeof window === "undefined") return "Your Name";
-    return (
-      window.localStorage.getItem(NAME_STORAGE_KEY)?.trim() || "Your Name"
-    );
+    return window.localStorage.getItem(NAME_STORAGE_KEY)?.trim() || "Your Name";
   });
 
   useEffect(() => {
@@ -97,9 +95,6 @@ function MainArea({ onUserSpeech }) {
 
 /** CallCanvas holds the FaceTime-style layout */
 function CallCanvas({ onUserSpeech }) {
-  const userVideoRef = useRef(null);
-  const [userStreamError, setUserStreamError] = useState("");
-
   // Captions
   const [userCaption, setUserCaption] = useState({ text: "", final: false });
   const [botCaption, setBotCaption] = useState({ text: "", final: false });
@@ -113,30 +108,13 @@ function CallCanvas({ onUserSpeech }) {
   const [botSpeaking, setBotSpeaking] = useState(false);
 
   // Conversation session info persisted between turns
-  const [sessionInfo, setSessionInfo] = useState({ sessionId: null, userId: null });
+  const [sessionInfo, setSessionInfo] = useState({
+    sessionId: null,
+    userId: null,
+  });
 
   // Right panel event hook
   const pushStoryItemRef = useRef(null); // StoryPanel injects a setter
-
-  // Camera: user PIP video
-  useEffect(() => {
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false, // audio taken by SpeechRecognition instead
-        });
-        if (userVideoRef.current) userVideoRef.current.srcObject = stream;
-      } catch (e) {
-        setUserStreamError(e?.message || String(e));
-      }
-    })();
-    return () => {
-      if (userVideoRef.current?.srcObject) {
-        for (const t of userVideoRef.current.srcObject.getTracks()) t.stop();
-      }
-    };
-  }, []);
 
   // Inject hook for StoryPanel to register its adder
   const registerStoryAdder = (fn) => (pushStoryItemRef.current = fn);
@@ -303,17 +281,7 @@ function CallCanvas({ onUserSpeech }) {
         />
       </div>
 
-      <div className="pip-tile">
-        <video
-          ref={userVideoRef}
-          className="pip-video"
-          autoPlay
-          muted
-          playsInline
-        />
-        <CaptionOverlay text={userCaption.text} role="user" />
-        {userStreamError && <div className="error">{userStreamError}</div>}
-      </div>
+      {/* User video tile removed */}
 
       <Controls listening={listening} onMicToggle={toggleListening} />
       <StoryPanelBridge register={registerStoryAdder} />
@@ -376,7 +344,12 @@ function ProfileModal({ onClose, totalWords, name, onNameChange }) {
   };
 
   return (
-    <div className="profile-overlay" role="dialog" aria-modal="true" aria-label="Profile">
+    <div
+      className="profile-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Profile"
+    >
       <div className="profile-panel">
         <button
           className="profile-close"
@@ -437,7 +410,14 @@ function CartoonAnimal() {
           <stop offset="100%" stopColor="#f4845f" />
         </linearGradient>
       </defs>
-      <circle cx="60" cy="60" r="54" fill="url(#foxFur)" stroke="#e26b4c" strokeWidth="4" />
+      <circle
+        cx="60"
+        cy="60"
+        r="54"
+        fill="url(#foxFur)"
+        stroke="#e26b4c"
+        strokeWidth="4"
+      />
       <path
         d="M22 42 L40 18 L52 40"
         fill="#fcd9ad"
@@ -470,7 +450,14 @@ function CartoonAnimal() {
         fill="none"
         strokeLinecap="round"
       />
-      <circle cx="60" cy="72" r="5" fill="#fcd9ad" stroke="#e26b4c" strokeWidth="2" />
+      <circle
+        cx="60"
+        cy="72"
+        r="5"
+        fill="#fcd9ad"
+        stroke="#e26b4c"
+        strokeWidth="2"
+      />
       <path
         d="M40 86 L30 90"
         stroke="#1f2d3d"
@@ -511,7 +498,14 @@ function PlantGrowth({ stageIndex, percent }) {
             <stop offset="100%" stopColor="#8b5a44" />
           </linearGradient>
         </defs>
-        <rect x="54" y="168" width="52" height="22" fill="url(#potGradient)" rx="8" />
+        <rect
+          x="54"
+          y="168"
+          width="52"
+          height="22"
+          fill="url(#potGradient)"
+          rx="8"
+        />
         <rect x="48" y="160" width="64" height="12" fill="#b8836d" rx="6" />
         <path
           d={`M80 ${baseY} Q78 ${stemTop + 10} 80 ${stemTop}`}
@@ -579,7 +573,18 @@ function StoryPanel() {
         {items.map((it, index) => (
           <li key={it.id} className="story-card">
             <div className="story-image">
-              <img src={'/gemini-native-image-' + (items.length - index - 1) + '.png'} alt="Google Gemini Image" width="72" height="72"/>
+              <img
+                src={`http://localhost:5173/gemini-native-image-${
+                  items.length - index - 1
+                }.png`}
+                alt="Generated Scene"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                }}
+              />
             </div>
             <div className="story-text">{it.prompt}</div>
           </li>

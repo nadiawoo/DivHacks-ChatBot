@@ -463,41 +463,7 @@ app.post("/api/illustrate", async (req, res) => {
       action: resolvedAction,
     });
 
-    const nbUrl = process.env.NANOBANANA_URL;
-    const nbKey = process.env.NANOBANANA_API_KEY;
-
-    let serviceImage = null;
-
-    if (nbUrl && nbKey) {
-      try {
-        const fetch = (await import("node-fetch")).default;
-        const payload = { prompt: composedPrompt };
-        if (state.lastImage) payload.expand = state.lastImage;
-
-        const r = await fetch(nbUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${nbKey}`,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!r.ok) {
-          const text = await r.text();
-          console.error("NanoBanana service error:", r.status, text);
-        } else {
-          const body = await r.json();
-          serviceImage = body.image || body.url || null;
-        }
-      } catch (err) {
-        console.error("Error calling NanoBanana service:", err);
-      }
-    }
-
-    if (!serviceImage) {
-      serviceImage = await generateImageWithGemini(composedPrompt);
-    }
+    let serviceImage = await generateImageWithGemini(composedPrompt);
 
     const historyPreview = [
       ...state.history.map(({ prompt: p }) => p),
