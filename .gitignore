@@ -2,3 +2,16 @@ node_modules
 .env
 lingua/frontend/public/gemini-native-image**.sqlite3-shm
 *.sqlite3-wal
+
+# Large image files
+lingua/frontend/public/gemini-native-image-*.png
+lingua/frontend/public/B2EBF491-AEEF-4E44-97DF-058305EDF7FC.png
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Build outputs
+lingua/frontend/dist/
