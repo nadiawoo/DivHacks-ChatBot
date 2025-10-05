@@ -326,7 +326,6 @@ function streamBotCaption(text, setBotCaption, setBotSpeaking, onDone) {
   const words = text.split(/\s+/);
   let i = 0;
   setBotSpeaking(true);
-  const synth = window.speechSynthesis;
 
   // Build up the caption gradually
   const interval = setInterval(() => {
@@ -337,17 +336,8 @@ function streamBotCaption(text, setBotCaption, setBotSpeaking, onDone) {
     });
     if (i >= words.length) {
       clearInterval(interval);
-      // Speak full line once caption finished
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 0.95;
-      u.onend = () => {
-        setBotSpeaking(false);
-        onDone?.();
-      };
-      try {
-        synth.cancel();
-      } catch {}
-      synth.speak(u);
+      setBotSpeaking(false);
+      onDone?.();
     }
   }, 80); // token streaming speed
 }
