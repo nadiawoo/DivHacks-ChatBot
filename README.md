@@ -1,34 +1,57 @@
-# DivHacks-ChatBot
+<div align="center">
 
-This is a chatbot application that is used to aid children with speech impediments.
+# 🌱 **Stem.me — AI Speech Companion for Children**
 
-## Setup
-1. Clone this repo.
-2. Create a file `lingua/server/.env` and add the following text:
-   ```
-   GEMINI_API_KEY=<your Gemini API key>
-   PORT=3001
-   ```
-   By default the server stores data locally in SQLite. To use a remote MySQL database instead, add:
-   ```
-   DB_CLIENT=mysql
-   DB_HOST=<mysql host>
-   DB_PORT=<mysql port>
-   DB_USER=<mysql username>
-   DB_PASSWORD=<mysql password>
-   DB_NAME=<mysql database>
-   SESSION_IDLE_TIMEOUT_MS=300000 # optional; new session after 5 minutes idle
-   ```
-3. Run `npm install` in the `lingua`, `lingua/frontend` and the `lingua/server` directories.
-4. In the `lingua` directory, run `npm run dev`.
+![Banner](https://github.com/<your-username>/<your-repo>/assets/banner.png)
 
-## Growth Analysis
+> “Because every child deserves to be heard.”  
+> 🗣️ AI-powered speech companion for children with communication challenges.  
 
-To generate an offline growth report from stored transcripts:
+[![Built with React](https://img.shields.io/badge/Built_with-React-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Google Gemini](https://img.shields.io/badge/AI-Google_Gemini-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![ElevenLabs](https://img.shields.io/badge/TTS-ElevenLabs-FF8800)](https://elevenlabs.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![Hackathon](https://img.shields.io/badge/Event-Columbia_DivHacks_2025-purple)]()
 
-```
-cd lingua/server
-node progress-tracker.js <userId>
-```
+</div>
 
-The script pulls all sessions for the given user, scores grammar and core-word usage, and prints a trend summary for easier long-term assessment.
+---
+
+## 🎯 **Overview**
+
+**Stem.me** transforms speech therapy into an engaging AI experience for children aged 3–13 with speech impediments.  
+Using **real-time voice recognition**, **AI-driven conversation**, and **scene-based storytelling**, the platform encourages language growth in a fun, supportive way.
+
+---
+
+## ✨ **Core Features**
+
+| 🌟 Feature | Description |
+|-------------|-------------|
+| 🗣️ **Live Speech Recognition** | Uses Web Speech API to understand children’s voice in real time. |
+| 🤖 **Conversational Therapy** | Powered by **Gemini 2.5** with adaptive correction for fragmented speech. |
+| 🎨 **Story Image Generation** | Generates contextual scenery using **Gemini Imagen 3 Fast** for each conversation. |
+| 🔊 **Natural Voice Output** | Uses **ElevenLabs TTS** for warm, child-friendly voice feedback. |
+| 🌳 **Progress Tracker** | Visual growth tree rewards consistent speech and interaction. |
+
+---
+
+## 🧠 **Tech Stack**
+
+| Layer | Technology |
+|-------|-------------|
+| **Frontend** | React + Vite + Web Speech API |
+| **Backend** | Node.js + Express |
+| **AI Models** | Google Gemini 2.5 (Text + Image), ElevenLabs (TTS) |
+| **Database** | SQLite (default) / MySQL (optional) |
+| **Deployment** | Netlify (Frontend) + Render/Heroku (Backend) |
+
+---
+
+## ⚙️ **Setup Instructions**
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/<your-username>/DivHacks-ChatBot.git
+cd DivHacks-ChatBot/lingua
