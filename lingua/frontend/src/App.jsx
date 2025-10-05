@@ -1,6 +1,7 @@
 import React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./facetime.css";
+import { playVoiceFromText } from "./utils/tts";
 
 // --- CONFIG STUBS (wire later to real services) ---
 const BOT_VIDEO_SRC = ""; // e.g., "/bot.mp4" if you drop a loop into public/
@@ -84,7 +85,9 @@ function CallCanvas() {
         body: JSON.stringify({ message: text }),
       });
       const data = await res.json();
-      return (data.reply || "").trim();
+      const reply = (data.reply || "").trim();
+      if (reply) playVoiceFromText(reply);
+      return reply;
     } catch (err) {
       console.error("API error:", err);
       return "Sorry, I am having trouble connecting to the server.";
