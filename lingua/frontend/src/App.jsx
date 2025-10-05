@@ -49,6 +49,9 @@ function CallCanvas() {
   // Bot speaking state (browser TTS for now)
   const [botSpeaking, setBotSpeaking] = useState(false);
 
+  // Conversation session info persisted between turns
+  const [sessionInfo, setSessionInfo] = useState({ sessionId: null, userId: null });
+
   // Right panel event hook
   const pushStoryItemRef = useRef(null); // StoryPanel injects a setter
 
@@ -79,12 +82,23 @@ function CallCanvas() {
   // Async helper to get bot reply from backend
   async function getBotReply(text) {
     try {
+      const payload = { message: text };
+      if (sessionInfo.sessionId) payload.sessionId = sessionInfo.sessionId;
+
       const res = await fetch("http://localhost:3001/api/converse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+
+      if (data.sessionId || data.userId) {
+        setSessionInfo((prev) => ({
+          sessionId: data.sessionId ?? prev.sessionId,
+          userId: data.userId ?? prev.userId,
+        }));
+      }
+
       const reply = (data.reply || "").trim();
       if (reply) playVoiceFromText(reply);
       return reply;

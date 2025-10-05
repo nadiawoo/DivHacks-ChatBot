@@ -5,6 +5,21 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import * as fs from "node:fs";
 import { randomUUID } from "crypto";
 import { ElevenLabsClient } from "elevenlabs";
+import {
+  appendTranscriptTurn,
+  createSessionForUser,
+  findActiveSessionForUser,
+  getSessionLastActivity,
+  getProgressSnapshots,
+  getSessionById,
+  getTranscriptForSession,
+  getUserProfile,
+  getUserProgress,
+  getUserRecord,
+  listUsers,
+  sanitizeSessionId,
+  sanitizeUserId,
+} from "./db.js";
 
 
 dotenv.config();
@@ -28,6 +43,25 @@ const ACTION_EXPAND = "expand";
 
 const sanitize = (value) => (typeof value === "string" ? value.trim() : "");
 
+const SESSION_IDLE_TIMEOUT_MS = Number(
+  process.env.SESSION_IDLE_TIMEOUT_MS || 5 * 60 * 1000
+);
+
+const clientIpFromRequest = (req) => {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.length) {
+    return forwarded.split(",")[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || "";
+};
+
+const userIdFromRequest = (req) => {
+  const rawIp = clientIpFromRequest(req).toLowerCase();
+  const normalized = rawIp.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const baseId = normalized ? `ip-${normalized}` : "ip-unknown";
+  return sanitizeUserId(baseId);
+};
+
 const keywordsFrom = (text) =>
   sanitize(text)
     .toLowerCase()
@@ -46,9 +80,14 @@ const resolveAction = (history, latestPrompt, requestedAction) => {
   return hasNewTopic ? ACTION_EXPAND : ACTION_UPDATE;
 };
 
-const ensureSession = (sessionId, { reset } = {}) => {
+const ensureSession = (sessionId, { reset, newId } = {}) => {
   let effectiveId = sanitize(sessionId);
-  if (reset || !effectiveId) effectiveId = randomUUID();
+  if (reset && newId) {
+    const sanitizedNewId = sanitize(newId);
+    effectiveId = sanitizedNewId || randomUUID();
+  } else if (reset || !effectiveId) {
+    effectiveId = randomUUID();
+  }
 
   if (!illustrationSessions.has(effectiveId) || reset) {
     illustrationSessions.set(effectiveId, {
@@ -196,6 +235,39 @@ app.post("/api/converse", async (req, res) => {
     const { message, sessionId, resetSession = false } = req.body || {};
     if (!message) return res.status(400).json({ error: "Missing message" });
 
+    const userId = userIdFromRequest(req);
+    const requestedSessionId = sanitizeSessionId(sessionId);
+    let sessionRecord = null;
+
+    if (!resetSession && requestedSessionId) {
+      const existing = await getSessionById(requestedSessionId);
+      if (existing && existing.userId === userId) sessionRecord = existing;
+    }
+
+    if (!resetSession && !sessionRecord) {
+      sessionRecord = await findActiveSessionForUser(userId);
+    }
+
+    if (sessionRecord) {
+      try {
+        const lastActivity = await getSessionLastActivity(sessionRecord.sessionId);
+        if (
+          lastActivity &&
+          Date.now() - Number(lastActivity) >= SESSION_IDLE_TIMEOUT_MS
+        ) {
+          sessionRecord = null;
+        }
+      } catch (activityErr) {
+        console.warn("Unable to determine session last activity", activityErr);
+      }
+    }
+
+    if (!sessionRecord) {
+      sessionRecord = await createSessionForUser(userId);
+    }
+
+    const activeSessionId = sessionRecord.sessionId;
+
     // Define the therapeutic system prompt
     const prompt = `
 You are a virtual therapist and companion designed for children aged 3–13 years old who may have communication difficulties such as Autism Spectrum Disorder (ASD), Social (Pragmatic) Communication Disorder, or Expressive Language Disorder. Do not speak with more than 3 sentences each time when responding. Your role is to support speech development, emotional wellbeing, and safe interaction in a gentle, patient, and engaging manner. You should communicate at the child’s level with simple, warm, and encouraging language, avoiding meaningless interjections like “wow” or “oops” and avoiding non-literal language like sarcasm or idioms. Instead, use direct, simple, and literal language, keeping sentences short and to the point to facilitate understanding and compliance. Prioritize using Core words and repeat them because they are useful in many situations. A sample list of Core words includes: I, you, want, look, my turn, eat, hurt, where, I like, I don’t like, drink, bathroom, what, help, no, happy, mad, sad.
@@ -217,8 +289,9 @@ LinguaGrow should reply:
     const text = await callGeminiWithRetry(prompt);
     console.log("Gemini →", text);
 
-    const { id: effectiveId, state } = ensureSession(sessionId, {
+    const { state } = ensureSession(activeSessionId, {
       reset: resetSession,
+      newId: activeSessionId,
     });
 
     state.lastChildUtterance = sanitize(message);
@@ -231,10 +304,117 @@ LinguaGrow should reply:
     if (state.conversation.length > 12) state.conversation.shift();
     state.lastUpdated = Date.now();
 
-    res.json({ reply: text, sessionId: effectiveId });
+    try {
+      await appendTranscriptTurn(
+        activeSessionId,
+        state.lastChildUtterance,
+        state.lastAssistantReply
+      );
+    } catch (dbErr) {
+      console.error("Failed to persist transcript turn", dbErr);
+    }
+
+    res.json({ reply: text, sessionId: activeSessionId, userId });
   } catch (err) {
     console.error("❌ Gemini API error:", err);
     res.status(500).json({ error: "Failed to get Gemini reply" });
+  }
+});
+
+app.get("/api/data/users", async (req, res) => {
+  try {
+    const rawUsers = await listUsers();
+    const users = await Promise.all(
+      rawUsers.map(async (user) => {
+        const progress = await getUserProgress(user.userId);
+        const createdAtIso = new Date(user.createdAt).toISOString();
+        const updatedAtIso = new Date(user.updatedAt).toISOString();
+        return {
+          userId: user.userId,
+          createdAt: user.createdAt,
+          createdAtIso,
+          updatedAt: user.updatedAt,
+          updatedAtIso,
+          sessionCount: progress.sessions.length,
+          activeSessions: progress.sessions
+            .filter((session) => session.active)
+            .map((session) => session.sessionId),
+        };
+      })
+    );
+
+    res.json({ users });
+  } catch (err) {
+    console.error("Failed to list users", err);
+    res.status(500).json({ error: "Failed to list users" });
+  }
+});
+
+app.get("/api/data/users/:userId", async (req, res) => {
+  try {
+    const userId = sanitizeUserId(req.params.userId);
+    if (!userId) return res.status(400).json({ error: "Invalid userId" });
+
+    const userRecord = await getUserRecord(userId);
+    if (!userRecord) return res.status(404).json({ error: "User not found" });
+
+    const [profile, snapshots, progress] = await Promise.all([
+      getUserProfile(userId),
+      getProgressSnapshots(userId),
+      getUserProgress(userId),
+    ]);
+
+    const sessions = await Promise.all(
+      progress.sessions.map(async (session) => {
+        const transcript = await getTranscriptForSession(session.sessionId);
+        return {
+          sessionId: session.sessionId,
+          createdAt: session.createdAt,
+          createdAtIso: session.createdAtIso,
+          active: session.active,
+          turnCount: session.turnCount,
+          transcript: transcript
+            ? {
+                session: transcript.session,
+                turns: transcript.turns,
+                messages: transcript.messages,
+              }
+            : null,
+        };
+      })
+    );
+
+    res.json({
+      user: {
+        userId: userRecord.userId,
+        createdAt: userRecord.createdAt,
+        createdAtIso: new Date(userRecord.createdAt).toISOString(),
+        updatedAt: userRecord.updatedAt,
+        updatedAtIso: new Date(userRecord.updatedAt).toISOString(),
+      },
+      profile,
+      sessions,
+      progressSnapshots: snapshots,
+    });
+  } catch (err) {
+    console.error("Failed to fetch user data", err);
+    res.status(500).json({ error: "Failed to fetch user data" });
+  }
+});
+
+app.get("/api/data/sessions/:sessionId", async (req, res) => {
+  try {
+    const sessionId = sanitizeSessionId(req.params.sessionId);
+    if (!sessionId) return res.status(400).json({ error: "Invalid sessionId" });
+
+    const transcript = await getTranscriptForSession(sessionId);
+    if (!transcript)
+      return res.status(404).json({ error: "Session not found" });
+
+    res.json(transcript);
+  } catch (err) {
+    console.error("Failed to fetch session transcript", err);
+    res.status(500).json({ error: "Failed to fetch session transcript" });
   }
 });
 
