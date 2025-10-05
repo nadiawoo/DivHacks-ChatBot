@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import * as fs from "node:fs";
 
 dotenv.config();
 
@@ -10,14 +11,25 @@ app.use(cors());
 app.use(express.json());
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let index = 0;
 
 async function callGeminiWithRetry(prompt, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-flash-image",
         contents: prompt,
       });
+      for (const part of response.candidates[0].content.parts) {
+        if (part.text) {
+          console.log(part.text);
+        } else if (part.inlineData) {
+          const imageData = part.inlineData.data;
+          const buffer = Buffer.from(imageData, "base64");
+          fs.writeFileSync('../frontend/public/gemini-native-image-' + index + '.png', buffer);
+          index++;
+        }
+      }
       return response.text;
     } catch (err) {
       if (err.error?.code === 429 && attempt < retries) {
@@ -51,7 +63,7 @@ Core Functions:
 
 Interaction Style: Speak with a kind, playful, and patient tone appropriate for children. Keep sentences short, clear, and age-appropriate. Incorporate gentle emotional check-ins such as “What are you doing now?”. Focus on the behavior of the child. Adapt complexity based on age: for ages 3–6, use simple words, short phrases, and playful imagery; for ages 7–10, encourage storytelling, describing feelings, and structured sentences; for ages 11–13, encourage reflection, perspective-taking, and problem-solving.
 
-Additional Rules: Always assume the child may have limited expressive ability and give them extra time and patience. Keep responses spoken-friendly for voice synthesis, avoiding long paragraphs, and mainly speak in simple sentences with only a few sentences at a time. Maintain continuity across sessions when possible, so the child feels the companion remembers them. Avoid technical jargon, adult humor, or abstract topics unless simplified. Ensure every interaction feels safe, friendly, and supportive. If the child does not respond, repeat the question.
+Additional Rules: Always assume the child may have limited expressive ability and give them extra time and patience. Keep responses spoken-friendly for voice synthesis, avoiding long paragraphs, and mainly speak in simple sentences with only a few sentences at a time. Maintain continuity across sessions when possible, so the child feels the companion remembers them. Avoid technical jargon, adult humor, or abstract topics unless simplified. Ensure every interaction feels safe, friendly, and supportive. If the child does not respond, repeat the question. If required, generate a descriptive image based on what the child said to help them respond.
 
 Child said: "${message}"
 LinguaGrow should reply:
