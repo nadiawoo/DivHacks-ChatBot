@@ -169,9 +169,12 @@ async function callGeminiWithRetry(prompt, retries = 3) {
           const buffer = Buffer.from(imageData, "base64");
           fs.writeFileSync('../frontend/public/gemini-native-image-' + index + '.png', buffer);
           console.log('Image generated')
-          index++;
         }
       }
+      if (!fs.existsSync('../frontend/public/gemini-native-image-' + index + '.png')) {
+        fs.copyFileSync('../frontend/public/blank.png', '../frontend/public/gemini-native-image-' + index + '.png');
+      }
+      index++;
       return response.text;
     } catch (err) {
       if (err.error?.code === 429 && attempt < retries) {
