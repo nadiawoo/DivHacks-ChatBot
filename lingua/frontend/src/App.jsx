@@ -271,7 +271,12 @@ function CallCanvas({ onUserSpeech }) {
           />
         ) : (
           <div className="bot-fallback">
-            <div className="bot-avatar" aria-label="Bot avatar" />
+            <img
+              src="/treebot-1.png"
+              alt="TreeBot Avatar"
+              className="bot-avatar"
+              style={{ width: "250px", height: "auto" }}
+            />
           </div>
         )}
         <CaptionOverlay
