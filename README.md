@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌱 **Stem.me — AI Speech Companion for Children**
+# 🌱 **Stemme.study — AI Speech Companion for Children**
 
 > “Because every child deserves to be heard.”  
 > 🗣️ AI-powered speech companion for children with communication challenges.  
