@@ -1,6 +1,6 @@
 # DivHacks-ChatBot
 
-This is a chatbot application that is used to aid children with speech impediments.
+This is a chatbot application that is used to interact with children with speech impediments.
 
 ## Setup
 1. Clone this repo.
