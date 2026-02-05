@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "../apiBase";
 import { playVoiceFromText } from "../utils/tts";
 import streamBotCaption from "../utils/streamBotCaption";
+import { useStory } from "../context/StoryContext";
 import CaptionOverlay from "./CaptionOverlay";
 import Controls from "./Controls";
 
@@ -20,10 +21,9 @@ export default function CallCanvas({ onUserSpeech }) {
     userId: null,
   });
 
-  // Right panel event hook (replaced with Context in Phase 3)
-  const pushStoryItemRef = useRef(null);
-
-  const registerStoryAdder = (fn) => (pushStoryItemRef.current = fn);
+  const { addItem } = useStory();
+  const addItemRef = useRef(addItem);
+  addItemRef.current = addItem;
 
   async function getBotReply(text) {
     try {
@@ -74,7 +74,7 @@ export default function CallCanvas({ onUserSpeech }) {
 
       getBotReply(fullSentence).then((reply) => {
         streamBotCaption(reply, setBotCaption, setBotSpeaking, () => {
-          pushStoryItemRef.current?.({ prompt: reply });
+          addItemRef.current({ prompt: reply });
         });
       });
     }
@@ -187,16 +187,6 @@ export default function CallCanvas({ onUserSpeech }) {
       </div>
 
       <Controls listening={listening} onMicToggle={toggleListening} />
-      <StoryPanelBridge register={registerStoryAdder} />
     </div>
   );
-}
-
-/** Bridge lets CallCanvas register a function to push tiles into StoryPanel.
- *  This will be replaced with React Context in Phase 3. */
-function StoryPanelBridge({ register }) {
-  useEffect(() => {
-    register((item) => window.__addStoryItem?.(item));
-  }, [register]);
-  return null;
 }

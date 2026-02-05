@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./facetime.css";
 import { PROGRESS_STORAGE_KEY, NAME_STORAGE_KEY } from "./utils/constants";
 import countWords from "./utils/countWords";
+import { StoryProvider } from "./context/StoryContext";
 import Header from "./components/Header";
 import MainArea from "./components/MainArea";
 import ProfileModal from "./components/ProfileModal";
@@ -40,7 +41,9 @@ export default function App() {
         onProfileClick={() => setProfileOpen(true)}
         profileOpen={profileOpen}
       />
-      <MainArea onUserSpeech={handleUserSpeech} />
+      <StoryProvider>
+        <MainArea onUserSpeech={handleUserSpeech} />
+      </StoryProvider>
       {profileOpen && (
         <ProfileModal
           name={profileName}

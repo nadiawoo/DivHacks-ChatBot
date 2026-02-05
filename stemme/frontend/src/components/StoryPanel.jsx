@@ -1,16 +1,7 @@
-import { useEffect, useState } from "react";
+import { useStory } from "../context/StoryContext";
 
 export default function StoryPanel() {
-  const [items, setItems] = useState([]);
-
-  // expose an adder to CallCanvas via a global (replaced with Context in Phase 3)
-  useEffect(() => {
-    window.__addStoryItem = (item) =>
-      setItems((prev) => [{ id: Date.now(), ...item }, ...prev]);
-    return () => {
-      window.__addStoryItem = null;
-    };
-  }, []);
+  const { items } = useStory();
 
   return (
     <aside className="story">
