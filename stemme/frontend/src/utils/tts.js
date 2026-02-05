@@ -1,6 +1,8 @@
+import { API_BASE_URL } from "../apiBase";
+
 export async function playVoiceFromText(text) {
   try {
-    const response = await fetch("http://localhost:3001/api/tts", {
+    const response = await fetch(`${API_BASE_URL}/api/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
@@ -16,7 +18,6 @@ export async function playVoiceFromText(text) {
     const audio = new Audio(url);
     audio.play();
 
-    // Optional: auto-clean the URL after playback
     audio.onended = () => URL.revokeObjectURL(url);
   } catch (err) {
     console.error("Error playing voice:", err);

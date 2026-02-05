@@ -424,23 +424,23 @@ body,
   padding: 6px 8px;
   border-radius: 6px;
   font-size: 12px;
+}
 
-  .bot-avatar-large {
-    width: 400px; /* make it nice and big */
-    height: auto; /* preserve aspect ratio */
-    object-fit: contain; /* make sure it’s not cropped */
-    display: block;
-    margin: 0 auto; /* center it horizontally */
+.bot-avatar-large {
+  width: 400px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
   }
-
-  @keyframes pulse {
-    0%,
-    100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
+  50% {
+    transform: scale(1.05);
   }
 }
 

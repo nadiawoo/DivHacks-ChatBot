@@ -132,6 +132,7 @@ export default function CallCanvas({ onUserSpeech }) {
     recognizerRef.current = r;
 
     return () => {
+      clearTimeout(sendTimeout);
       try {
         r.abort();
       } catch { /* ignore */ }
