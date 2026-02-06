@@ -1,11 +1,14 @@
 node_modules
 .env
-lingua/frontend/public/gemini-native-image**.sqlite3-shm
+
+# SQLite databases
+*.sqlite3
+*.sqlite3-shm
 *.sqlite3-wal
 
 # Large image files (original uncompressed versions)
-lingua/frontend/public/gemini-native-image-*.png
-lingua/frontend/public/B2EBF491-AEEF-4E44-97DF-058305EDF7FC.png
+stemme/frontend/public/gemini-native-image-*.png
+stemme/frontend/public/B2EBF491-AEEF-4E44-97DF-058305EDF7FC.png
 
 # Python cache files
 __pycache__/
@@ -14,4 +17,7 @@ __pycache__/
 *.pyc
 
 # Build outputs
-lingua/frontend/dist/
+stemme/frontend/dist/
+
+# OS files
+.DS_Store
