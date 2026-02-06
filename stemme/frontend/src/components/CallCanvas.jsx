@@ -56,11 +56,30 @@ export default function CallCanvas({ onUserSpeech }) {
     }
   }
 
+  async function getIllustration(prompt) {
+    try {
+      const payload = { prompt };
+      if (sessionInfo.sessionId) payload.sessionId = sessionInfo.sessionId;
+
+      const res = await fetch(`${API_BASE_URL}/api/illustrate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      return data.image || null;
+    } catch (err) {
+      console.error("Illustration error:", err);
+      return null;
+    }
+  }
+
   const { listening, supported, toggleListening } = useSpeechRecognition({
     onSentence(text) {
       getBotReply(text).then((reply) => {
-        streamBotCaption(reply, setBotCaption, setBotSpeaking, () => {
-          addItemRef.current({ prompt: reply });
+        streamBotCaption(reply, setBotCaption, setBotSpeaking, async () => {
+          const image = await getIllustration(reply);
+          addItemRef.current({ prompt: reply, image });
         });
       });
     },

@@ -12,18 +12,20 @@ export default function StoryPanel() {
       <ul className="story-list">
         {items.map((it, index) => (
           <li key={it.id} className="story-card">
-            <div className="story-image">
-              <img
-                src={`/gemini-native-image-${items.length - index - 1}.png`}
-                alt="Generated Scene"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                }}
-              />
-            </div>
+            {it.image && (
+              <div className="story-image">
+                <img
+                  src={it.image}
+                  alt="Generated Scene"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                  }}
+                />
+              </div>
+            )}
             <div className="story-text">{it.prompt}</div>
           </li>
         ))}
