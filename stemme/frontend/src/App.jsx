@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import "./facetime.css";
+import "./styles.css";
 import LandingPage from "./pages/LandingPage";
 import TherapySession from "./pages/TherapySession";
 
